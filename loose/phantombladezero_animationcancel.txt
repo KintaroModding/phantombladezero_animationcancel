@@ -1,0 +1,16 @@
+; Animation Cancel (phantombladezero_animationcancel) settings.
+; Change a value and save. The game picks it up within 2 seconds, no restart needed.
+; Without this file the mod uses these same values.
+;
+; Cancel: 1 = dodge or guard breaks out of your normal attacks at any point (dodge also out of a guard), 0 = stock.
+Cancel=1
+; CancelHeal: 1 = a medicine key also breaks out of those attacks (the heal uses its potion and plays out in full), 0 = stock.
+CancelHeal=0
+; StaggerEscape: 1 = dodge or guard breaks out of a standing stagger, 0 = stock.
+StaggerEscape=1
+; EscapeBreak: 1 = dodge also rolls out of a broken stance (Sha-Chi broken), 0 = a broken stance plays out.
+EscapeBreak=1
+; EscapeDelayMs: how long a stagger must last before you can break out, in milliseconds (0 to 3000).
+EscapeDelayMs=400
+; EscapeCooldownS: seconds after a stagger escape before the next one (0 to 60).
+EscapeCooldownS=4

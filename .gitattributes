@@ -1,0 +1,9 @@
+* text=auto eol=lf
+*.uasset binary
+*.uexp binary
+*.pak binary
+*.utoc binary
+*.ucas binary
+*.locres binary
+# Settings files that players edit by hand (pakfile mods): Windows line ends
+loose/*.txt text eol=crlf

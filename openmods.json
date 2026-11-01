@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openmods.nexus/openmods.schema.json",
+  "openmods": 1,
+  "name": "Animation Cancel",
+  "summary": "Dodge or guard cancels your own attacks at once and breaks you out of a stagger, with the game's own moves. Settings in a text file next to the mod.",
+  "games": ["phantom-blade-zero"],
+  "tags": ["gameplay"],
+  "gameVersions": ["Release (Steam build 26266538)"],
+  "cover": "docs/cover.png"
+}

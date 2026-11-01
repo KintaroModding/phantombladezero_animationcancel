@@ -1,0 +1,14 @@
+{
+  "name": "Animation Cancel",
+  "folder": "phantombladezero_animationcancel",
+  "author": "Kintaro",
+  "version": "1.0",
+  "description": "Dodge or guard cancels your own attacks at once and breaks you out of a stagger, with the game's own moves. Settings in phantombladezero_animationcancel.txt next to the pak, live in game.",
+  "kind": "pakfile",
+  "game": "phantombladezero",
+  "gameFolder": "PBZ",
+  "paksPath": "ProjectPBZ\\Content\\Paks",
+  "gameVersion": "CL-301524_JKS-17219",
+  "engine": "UE5_7",
+  "pakName": "phantombladezero_animationcancel_P"
+}
