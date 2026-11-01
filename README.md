@@ -1,6 +1,10 @@
 # Animation Cancel
 
-Dodge or guard cancels your own attacks at once and breaks you out of a stagger, with the game's own moves. Settings in phantombladezero_animationcancel.txt next to the pak, live in game.
+Guard cuts your own attacks short, dodge where the game makes it wait, and dodge or guard breaks you out of a stagger, with the game's own moves. Settings in phantombladezero_animationcancel.txt next to the pak, live in game.
+
+Game test of 1.0 (2026-11-01): the game itself already lets a dodge break most attacks, so the mod's dodge cancel
+rarely acts (the mod sees the game's own dodge tags after its 30 ms grace and does nothing); the guard cancel and the
+stagger escape are what the mod adds.
 
 A mod for Phantom Blade Zero (Unreal Engine 5.7), made with game version `CL-301524_JKS-17219`. This README is
 for developers. What the mod does, how to install it and its compatibility are in [openmods.md](openmods.md), the mod

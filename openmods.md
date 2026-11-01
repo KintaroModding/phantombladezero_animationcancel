@@ -1,13 +1,16 @@
 # Animation Cancel
 
-Dodge or guard cancels your own attacks at once and breaks you out of a stagger, with the game's own moves. Settings in a text file next to the mod.
+Guard cuts your own attacks short, dodge where the game makes it wait, and dodge or guard breaks you out of a stagger. Settings in a text file next to the mod.
 
 ## What it does
 
-Your dodge and guard no longer wait for your own swing to end, and they get you out of a stagger.
+Your guard no longer waits for your own swing to end, and dodge or guard gets you out of a stagger.
 
-- **Cancel:** press dodge or guard during a light, heavy or weapon-switch attack, and you dodge or guard at once.
-  Dodge also cuts a guard short.
+- **Guard cancel:** press guard during a light, heavy or weapon-switch attack, and you guard at once. In the game you
+  wait for the swing to end.
+- **Dodge:** the game itself already lets a dodge break most attacks; then the mod does nothing (it gives the game two
+  frames and sees its dodge start). Only where the game refuses a dodge, the mod starts it, for example out of a
+  guard.
 - **Stagger escape:** while enemy hits keep you staggered, dodge rolls you out (the game's own escape roll) and guard
   raises your guard: after 0.4 s of stagger, at most once every 4 s. In the last part of a stagger, where the game
   already allows a dodge, it comes out at once.
@@ -20,7 +23,9 @@ knockdowns, launches, being executed or grabbed, death and cutscenes. Nothing is
 
 | | Game | With the mod (default) |
 |---|---|---|
-| Dodge or guard during a light, heavy or weapon-switch attack | waits for the swing to end | at once |
+| Guard during a light, heavy or weapon-switch attack | waits for the swing to end | at once |
+| Dodge during an attack | mostly at once already | the same; the mod steps in only where the game refuses |
+| Dodge during a guard | refused | at once |
 | Dodge or guard in a standing stagger | waits | after 0.4 s, once every 4 s |
 | Dodge in a broken stance | waits | rolls out |
 | Medicine key during an attack | waits | waits (`CancelHeal=1`: drinks at once) |
@@ -56,7 +61,7 @@ read keeps its default.
 
 | Setting | Default | What it does |
 |---|---|---|
-| `Cancel` | `1` | 1: dodge or guard cancels your normal attacks; 0: as in the game |
+| `Cancel` | `1` | 1: guard cancels your normal attacks, dodge where the game refuses it; 0: as in the game |
 | `CancelHeal` | `0` | 1: a medicine key cancels them too |
 | `StaggerEscape` | `1` | 1: dodge or guard breaks out of a standing stagger |
 | `EscapeBreak` | `1` | 1: dodge also rolls out of a broken stance |
