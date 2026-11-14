@@ -5,5 +5,5 @@
 *.utoc binary
 *.ucas binary
 *.locres binary
-# Settings files that players edit by hand (pakfile mods): Windows line ends
-loose/*.txt text eol=crlf
+# Settings files that players edit by hand: Windows line ends (PBZModLoader mods: in the mod folder)
+src/*/*.txt text eol=crlf

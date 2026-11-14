@@ -2,13 +2,13 @@
   "name": "Animation Cancel",
   "folder": "phantombladezero_animationcancel",
   "author": "Kintaro",
-  "version": "1.0",
-  "description": "Guard cuts your own attacks short, dodge where the game makes it wait, and dodge or guard breaks you out of a stagger, with the game's own moves. Settings in phantombladezero_animationcancel.txt next to the pak, live in game.",
-  "kind": "pakfile",
+  "version": "2.0",
+  "description": "Guard cuts your own attacks short, dodge where the game makes it wait, and dodge or guard breaks you out of a stagger, with the game's own moves. A PBZModLoader mod; settings in a text file in its folder, or on its Mods Menu page, live in game.",
+  "kind": "pbzmodloader",
   "game": "phantombladezero",
   "gameFolder": "PBZ",
-  "paksPath": "ProjectPBZ\\Content\\Paks",
-  "gameVersion": "CL-301524_JKS-17219",
+  "modsPath": "ProjectPBZ\\PBZModLoader\\mods",
+  "gameVersion": "CL-302256_JKS-17280",
   "engine": "UE5_7",
-  "pakName": "phantombladezero_animationcancel_P"
+  "pbzmodloader": "2.1.0"
 }

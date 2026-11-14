@@ -2,9 +2,10 @@
   "$schema": "https://openmods.nexus/openmods.schema.json",
   "openmods": 1,
   "name": "Animation Cancel",
-  "summary": "Guard cuts your own attacks short, dodge where the game makes it wait, and dodge or guard breaks you out of a stagger. Settings in a text file next to the mod.",
+  "summary": "Guard cuts your own attacks short, dodge where the game makes it wait, and dodge or guard breaks you out of a stagger. A PBZModLoader mod.",
   "games": ["phantom-blade-zero"],
   "tags": ["gameplay"],
-  "gameVersions": ["Release (Steam build 26266538)"],
+  "requires": ["PBZModLoader (tested with 2.1.0)"],
+  "gameVersions": ["Steam build 26367565"],
   "cover": "docs/cover.png"
 }

@@ -1,97 +1,92 @@
 # Animation Cancel
 
-Guard cuts your own attacks short, dodge where the game makes it wait, and dodge or guard breaks you out of a stagger, with the game's own moves. Settings in phantombladezero_animationcancel.txt next to the pak, live in game.
+Guard cuts your own attacks short, dodge where the game makes it wait, and dodge or guard breaks you out of a stagger, with the game's own moves. A PBZModLoader mod; settings in a text file in its folder, or on its Mods Menu page, live in game.
 
-Game test of 1.0 (2026-11-01): the game itself already lets a dodge break most attacks, so the mod's dodge cancel
-rarely acts (the mod sees the game's own dodge tags after its 30 ms grace and does nothing); the guard cancel and the
-stagger escape are what the mod adds.
-
-A mod for Phantom Blade Zero (Unreal Engine 5.7), made with game version `CL-301524_JKS-17219`. This README is
-for developers. What the mod does, how to install it and its compatibility are in [openmods.md](openmods.md), the mod
-page on [openmods](https://openmods.nexus).
+A [PBZModLoader](https://github.com/KintaroModding/phantombladezero_pbzmodloader) mod for Phantom Blade Zero (Unreal Engine
+5.7), made with game version `CL-302256_JKS-17280` and PBZModLoader 2.1.0. This README is for developers.
+What the mod does, how to install it and its compatibility are in [openmods.md](openmods.md), the mod page on
+[openmods](https://openmods.nexus).
 
 ## How it works
 
-The game runs much of its logic in JavaScript (Puerts). The mod replaces one small game script,
-`ProjectPBZ/Content/JavaScript/UI/Widget/Foundation/WeaponAdvancdNumricEntry.js` (the HUD mixin of
-`W_WeaponAdvancdNumricValueText`; `MainStart.js` requires it once at game start). The game's code of that file stays
-byte for byte; the mod's code sits between `// Animation Cancel: begin.` and `// Animation Cancel: end`, before the
-file's last line. It runs once on the `require`, inside its own function, and checks the player's keys every 16 ms.
+The game runs much of its logic in JavaScript (Puerts). PBZModLoader loads every folder in
+`ProjectPBZ/PBZModLoader/mods/` that has a `main.js`, through the game's own module system, after the game's
+`MainStart`; `require("ue")`, `require("puerts")` and `require("Library/TsHelper")` are the game's modules, and
+`puerts.argv.getByName("GameInstance")` gives the game instance. Before a reload (Alt+F5) the loader awaits the mod's
+`stop()`, which must give back everything the mod changed.
 
-- **Cancel:** a dodge or guard press during the Start, Act or Combo phase of `Ability.Action.Hun.Light`, `.Heavy` or
-  `.Weapon.Switch` (dodge also during `Ability.Action.Stance`) starts the move with the game's own
-  `AbilityInputComponent.ForceActivateExternalActionAbilityByTag`. The guard first moves the attack into its Cancel
-  phase (`ActorStateComponent.TryActivateNewState`), only while the key is held.
-- **Stagger escape:** in a standing stagger (and a stance break with `EscapeBreak`), after `EscapeDelayMs` and at most
-  once per `EscapeCooldownS`, the dodge first sets the hit phase `CharacterState.Hitreact.Phase.DashEscape`
-  (`HitreactComponent.ChangeHitPhase`), so it comes out as the game's escape roll; the guard uses the hit Cancel phase.
-  A failed escape puts the hit phase back.
-- **Never:** the states in `NEVER` (death, executions, sequences, dialogue, heals, special moves).
+`main.js` polls every 16 ms (the game's own scripts use 16 ms timers; `IsInputKeyDown` sees only a key held across
+a poll) and watches the keys bound to four input actions: `IA_Dodge`, `IA_Deflect` (guard), `IA_UseBottomItem` and
+`IA_UseTopItem` (the medicine slots), read through `EnhancedInputLocalPlayerSubsystem.QueryKeysMappedToAction`. A press
+the game did not turn into the move itself within 30 ms (two frames) is handled:
 
-Settings: `loose/phantombladezero_animationcancel.txt` goes next to the pak in `Paks\~mods`; the mod reads it every
-2 s (`EasyCsv.LoadStringFromLocalFile`) and uses its defaults (`DEFAULTS`) without it. `DEBUG = true` in the script
-writes each decision to the game's log (`LogPuerts`); two lines are always written: when the mod cannot start and
-when it stops after 20 failed polls in a row (a game update).
+- **Cancel** (an attack's Start, Act or Combo phase: `Ability.Action.Hun.Light`, `.Heavy`, `.Weapon.Switch`; dodge also
+  out of `Ability.Action.Stance`): `AbilityInputComponent.ForceActivateExternalActionAbilityByTag(ability, inputAction,
+  priority)`, then `RemoveBufferedInputs`. The guard first moves the attack into its Cancel phase with
+  `ActorStateComponent.TryActivateNewState(CharacterState.Action.Phase.Cancel)`, only while its key is still held.
+- **Stagger escape** (standing staggers, and `Break.Normal` with `EscapeBreak`): after `EscapeDelayMs`, at most once per
+  `EscapeCooldownS`, `HitreactComponent.ChangeHitPhase(DashEscape)` (dodge) or the hit Cancel phase (guard), then the
+  forced move; a failed one puts the hit phase back. In a hit phase where the move is allowed already, it is forced at
+  once.
+- **Heal cancel** (`CancelHeal`): the upper-body heal `Ability.UpperBody.Hun.UseItem` with the slot's input action.
 
-The block is laid out for editing: settings, timing, log, game tags, the moves table (one entry per move, its fields
-explained above it), the optional Mods Menu entry, then the runtime (settings file, keys, the two kinds of moves,
-the poll). `tests/test_mod.js` runs it in Node.js against a small stand-in game.
+Never: heals, combat arts, Sha-Chi skills, executions, cutscenes, death and the other states in `NEVER`. The mod
+changes nothing that lasts, so `stop()` only ends its timer. 20 failed polls in a row (a game update) stop it for the
+session with one warning. `DEBUG = true` logs every decision.
 
-The mod replaces whole files. A mod that changes the same files conflicts with this one, and a game update that
-changes them needs a new build of the mod from the new files.
+2.0 is the port of 1.0 (2026-11-01), a block appended to the game script
+`UI/Widget/Foundation/WeaponAdvancdNumricEntry.js` in a pak (since the game update of 2026-11-04 the game refuses a
+changed script without a bypass). The logic is 1.0's, unchanged except where a comment says "2.0": the settings file
+next to `main.js` (written with the defaults when missing), the Mods Menu page in the 0.9 form (its id is the
+folder name, not 1.0's `PBZAnimationCancel`: Mods Menu 0.9.8 hides a pushed page under one of its built-in ids unless
+its own loader started that mod), a start that fails throws, `valid()` catches a freed
+GameInstance, `stop()`, and the texts that said "dodge or guard" cancels (the game lets a dodge break most attacks
+itself; the mod's dodge acts where the game refuses it).
 
-## Build
+`tests/test_mod.js` runs the script in Node.js against a stand-in player (tags, hit state, keys, components), drives
+the poll by hand and checks the cancels, the escapes, the settings and the parts of 2.0 (49 checks).
 
-Requirements:
+- **Settings file:** `phantombladezero_animationcancel.txt` next to `main.js` (`__dirname`, the mod's folder as a full path), read every
+  2 s with `EasyCsv.LoadStringFromLocalFile` and written with the defaults when missing. The shipped file is exactly the
+  script's default text (`tests/test_mod.js` checks it).
+- **Mods Menu, optional:** PBZModLoader starts its mods after Mods Menu's, so a running Mods Menu (0.9.0 or later) has
+  its registry object in `globalThis.PBZModsMenu` by then. Only when it has the features `settingsPath` and
+  `store.saved`, the mod pushes its page (id `phantombladezero_animationcancel`, `store: "saved"`) and reads the file the page saves
+  (`PBZModsMenu.settingsPath(id)`, in Mods Menu's Saved folder): a registered page cannot save anywhere else.
+- **Log:** `console.log` lines that start with `[PBZMOD]` and the game's warnings reach `ProjectPBZ/PBZModLoader/loader.log`.
 
-- Windows PowerShell 5.1 (part of Windows).
-- [repak](https://github.com/trumank/repak/releases) v0.2.3 and [retoc](https://github.com/trumank/retoc/releases)
-  v0.1.5. `build.ps1` looks for `_tools\repak\repak.exe` and `_tools\retoc\retoc.exe` in the parent folders of the
-  project; set `UE5_TOOLS` to a folder that holds both to use another place.
-- Optional, for mods with JavaScript: [Node.js](https://nodejs.org/) for the syntax check and the offline test
-  (`tests\test_mod.js`).
+## Check and deploy
+
+Requirements: Windows PowerShell 5.1 and [Node.js](https://nodejs.org/) (for `node --check` and the offline test).
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\build.ps1             # dist\phantombladezero_animationcancel_P.pak/.utoc/.ucas
-powershell -ExecutionPolicy Bypass -File .\build.ps1 -Deploy     # build, then copy the files to Paks\~mods
-powershell -ExecutionPolicy Bypass -File .\deploy.ps1 -Wait      # copy the files when the game is closed
+powershell -ExecutionPolicy Bypass -File .\build.ps1             # node --check, tests\test_mod.js
+powershell -ExecutionPolicy Bypass -File .\build.ps1 -Deploy     # the checks, then deploy.ps1
+powershell -ExecutionPolicy Bypass -File .\deploy.ps1            # copy src\phantombladezero_animationcancel to the game
 ```
 
-The build checks every `.js` in `src` with `node --check` and runs `tests\test_mod.js` when there is one. Then it
-packs `src` into a `.pak` (repak, pak version V11, mount point `../../../`), writes an empty IoStore container of the
-same name (retoc `to-zen`; an IoStore game can ignore a `.pak` without one), and checks that the pak holds exactly
-the files of `src`, byte for byte.
+`deploy.ps1` mirrors `src\phantombladezero_animationcancel\` to `<game folder>\ProjectPBZ\PBZModLoader\mods\phantombladezero_animationcancel\`. The
+settings file that is already there is the tester's and stays; `-ResetConfig` copies the shipped one. The game folder
+comes from `gameDir` in `_tools\gamedata\phantombladezero\game.json`, else `$env:UE5_GAMES_DIR\PBZ`; `-GameDir` or
+`-ModsDir` override it. It stops when PBZModLoader is not installed (its start file
+`ProjectPBZ\Content\JavaScript\PBZModLoader\bootstrap.js` is missing).
 
-Loose files (the folder `loose`, flat; for example the mod's settings file) are not packed: the build copies them
-into `dist` next to the pak, and they go into `~mods` beside it. A mod without settings has no `loose` folder.
+The GitHub release zip holds the mod folder at `ProjectPBZ/PBZModLoader/mods/phantombladezero_animationcancel/`, so players unpack it
+into the game folder.
 
-`deploy.ps1` copies the three files and the loose files to `<game folder>\ProjectPBZ\Content\Paks\~mods`. A loose
-file that is already there is the player's settings and stays; `-ResetConfig` copies the shipped one. The game folder
-comes from `gameDir` in
-`_tools\gamedata\phantombladezero\game.json`, else `$env:UE5_GAMES_DIR\PBZ`; `-GameDir` or `-ModsDir` override
-it. The running game locks the files, so the script stops (exit code 2) or, with `-Wait`, waits until the game is
-closed.
-
-Versioning: every change raises the second number in `mod.json` (1.0 -> 1.1): `python scripts\bump_version.py`.
+Versioning: every change raises the second number in `mod.json` and `main.js` (1.0 -> 1.1): `python scripts\bump_version.py`.
 
 ## Project layout
 
 ```
-src/                               Mod source: the changed game files at their path in the game's .pak
-loose/                             Files next to the pak in Paks\~mods, such as the settings file (only when needed)
-tests/test_mod.js                  Offline test of the scripts (Node.js; only for mods with JavaScript)
-dist/                              Build output: the .pak/.utoc/.ucas and the loose files for Paks\~mods (git-ignored)
-docs/                              Cover and screenshots for openmods.md
-scripts/bump_version.py            Raises the version in mod.json
-build.ps1                          Checks and builds dist\ from src\
-deploy.ps1                         Copies the build to the game's Paks\~mods folder
-mod.json                           Name, version, game, engine and file names
+src/phantombladezero_animationcancel/   The mod folder: main.js and the shipped settings file
+tests/test_mod.js     Offline test of main.js (Node.js, stand-ins for the game)
+docs/                 Cover and screenshots
+scripts/              bump_version.py, check_openmods.py, publish.ps1
+build.ps1, deploy.ps1 Checks; copy into the game
+mod.json              Name, version, game, kind pbzmodloader, modsPath
 ```
-
-The first commit with a game file holds the original file, so `git diff` against it shows exactly what the mod
-changes.
 
 ## License
 
-MIT, see [LICENSE](LICENSE). The files in `src` are the game's own files with the changes above; Phantom Blade Zero and
-its files belong to their makers.
+MIT, see [LICENSE](LICENSE).

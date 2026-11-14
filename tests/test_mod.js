@@ -1,17 +1,20 @@
-// Offline test of the changed game script, run by build.ps1 when Node.js is installed: node tests/test_mod.js
-// It loads src/.../WeaponAdvancdNumricEntry.js with stand-ins for the modules the game gives it (ue, puerts) and a small
-// game world (the player's tags, hit state, keys and components), drives the mod's 16 ms poll by hand, and checks what
-// the mod does: the cancels, the stagger escapes, the settings file and the cases it must leave to the game.
+// Offline test of the mod, run by build.ps1: node tests/test_mod.js
+// It loads src/phantombladezero_animationcancel/main.js as PBZModLoader does (a module whose __dirname is the mod's
+// folder) with stand-ins for the modules the game gives it (ue, puerts), a small game world (the player's tags, hit
+// state, keys and components), an optional running Mods Menu and the settings file, drives the mod's 16 ms poll by hand,
+// and checks what the mod does: the cancels, the stagger escapes, the settings file, the cases it must leave to the game,
+// and (2.0) the start, stop() and the Mods Menu page. The move checks are 1.0's.
 "use strict";
 const fs = require("fs");
 const path = require("path");
 const Module = require("module");
 
-const SCRIPT = path.join(__dirname, "..", "src", "ProjectPBZ", "Content", "JavaScript", "UI", "Widget", "Foundation",
-    "WeaponAdvancdNumricEntry.js");
-const SETTINGS = path.join(__dirname, "..", "loose", "phantombladezero_animationcancel.txt");
-const CONTENT = "C:/Game/ProjectPBZ/Content/";
-const SETTINGS_PATH = CONTENT + "Paks/~mods/phantombladezero_animationcancel.txt";
+const FOLDER = path.join(__dirname, "..", "src", "phantombladezero_animationcancel");
+const SCRIPT = path.join(FOLDER, "main.js");
+const SETTINGS = path.join(FOLDER, "phantombladezero_animationcancel.txt");
+const SETTINGS_PATH = FOLDER.replace(/[\\/]+$/, "") + "/phantombladezero_animationcancel.txt";
+const MENU_PATH = "C:/Game/ProjectPBZ/Saved/PBZModsMenu/Settings/phantombladezero_animationcancel.txt";
+const VERSION = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "mod.json"), "utf8")).version;
 const KEYS = { "/PBZDeflectSystem/Input/IA_Dodge.IA_Dodge": "SpaceBar",
     "/PBZDeflectSystem/Input/IA_Deflect.IA_Deflect": "RightMouseButton",
     "/Game/PBZContent/Input/InputActions/IA_UseBottomItem.IA_UseBottomItem": "R",
@@ -31,12 +34,13 @@ function check(name, ok) {
 function boot(options = {}) {
     const world = {
         time: 1000, paused: false, held: new Set(), tags: new Set(["CharacterState.Space.Ground"]), hit: "None",
-        files: new Map(), forced: [], buffered: [], phases: [], states: [], warnings: [], timer: undefined,
+        files: new Map(), forced: [], buffered: [], phases: [], states: [], warnings: [], logs: [], saved: [],
+        pushed: [], loadError: undefined, timer: undefined,
         interval: undefined, cleared: false, forceResult: true, missingActions: new Set(options.missingActions || []),
         throwOnPawn: false,
     };
     if (options.settings !== undefined) {
-        world.files.set(SETTINGS_PATH, options.settings);
+        world.files.set(options.menu ? MENU_PATH : SETTINGS_PATH, options.settings);
     }
     const token = (name) => ({ StaticClass: () => name });
     const owns = (query) => [...world.tags].some((t) => t == query || t.startsWith(query + "."));
@@ -65,7 +69,7 @@ function boot(options = {}) {
     const asc = { HasMatchingGameplayTag: (tag) => owns(tag.TagName) };
     const pawn = { GetComponentByClass: (cls) => components[cls] };
     const controller = { IsInputKeyDown: (key) => world.held.has(key.KeyName) };
-    const gameInstance = {};
+    const gameInstance = { freed: false };
     class GameplayTag { constructor() { this.TagName = "None"; } }
     const ue = {
         LinearColor: class { },
@@ -78,12 +82,15 @@ function boot(options = {}) {
         ActorStateComponent: token("ActorStateComponent"),
         EnhancedInputLocalPlayerSubsystem: options.missingClass ? undefined : token("Subsystem"),
         KismetSystemLibrary: {
-            IsValid: (o) => !!o,
-            GetProjectContentDirectory: () => CONTENT,
+            // Puerts throws for a wrapper of an object the game has freed, even here (2026-11-14)
+            IsValid: (o) => { if (o && o.freed) throw new Error("passing a invalid object"); return !!o; },
             ConvertToAbsolutePath: (p) => p,
         },
         BlueprintPathsLibrary: { FileExists: (p) => world.files.has(p) },
-        EasyCsv: { LoadStringFromLocalFile(p, out) { out[0] = world.files.get(p); return true; } },
+        EasyCsv: {
+            LoadStringFromLocalFile(p, out) { out[0] = world.files.get(p); return true; },
+            SaveStringToFileWithFullPath(text, p) { world.saved.push([p, text]); world.files.set(p, text); return true; },
+        },
         GameplayStatics: {
             GetPlayerCharacter() {
                 if (world.throwOnPawn) {
@@ -110,7 +117,7 @@ function boot(options = {}) {
     const puerts = {
         $ref: (value) => [value],
         $unref: (box) => box[0],
-        argv: { getByName: (name) => (name == "GameInstance" ? gameInstance : undefined) },
+        argv: { getByName: (name) => (name == "GameInstance" && !options.noGameInstance ? gameInstance : undefined) },
     };
     const load = Module._load;
     Module._load = function (request, parent, isMain) {
@@ -124,16 +131,26 @@ function boot(options = {}) {
     };
     globalThis.setInterval = (fn, ms) => { world.timer = fn; world.interval = ms; return 7; };
     globalThis.clearInterval = (id) => { world.cleared = id === 7; };
-    const warn = console.warn;
+    const warn = console.warn, logLine = console.log;
     console.warn = (message) => world.warnings.push(String(message));
-    globalThis.PBZModsMenu = undefined;
+    console.log = (message) => world.logs.push(String(message));
+    globalThis.PBZModsMenu = options.menu === "array" ? [] : options.menu ? {
+        api: { has: (f) => !(options.menuMissing || []).includes(f) },
+        push(...mods) { world.pushed.push(...mods); return world.pushed.length; },
+        settingsPath: (id) => (world.pushed.some((m) => m.id == id) ? MENU_PATH : undefined),
+    } : undefined;
+    world.menuGlobal = globalThis.PBZModsMenu;
     delete require.cache[require.resolve(SCRIPT)];
     try {
         world.exports = require(SCRIPT);
     }
+    catch (e) {
+        world.loadError = e;
+    }
     finally {
         Module._load = load;
         console.warn = warn;
+        console.log = logLine;
     }
     // one poll after `ms` of game time
     world.poll = (ms = 16) => {
@@ -155,7 +172,20 @@ function boot(options = {}) {
     world.press = (key) => { world.held.add(key); };
     world.release = (key) => { world.held.delete(key); };
     world.setTags = (list) => { world.tags = new Set(list); };
-    world.menu = () => (globalThis.PBZModsMenu || [])[0];
+    world.menu = () => world.pushed[0];
+    world.gameInstance = gameInstance;
+    world.stop = () => {
+        const warnBefore = console.warn, logBefore = console.log;
+        console.warn = (message) => world.warnings.push(String(message));
+        console.log = (message) => world.logs.push(String(message));
+        try {
+            world.exports.stop();
+        }
+        finally {
+            console.warn = warnBefore;
+            console.log = logBefore;
+        }
+    };
     if (world.timer) {
         world.poll(); // the first poll reads the settings and loads the input actions and keys
     }
@@ -163,32 +193,62 @@ function boot(options = {}) {
 }
 const abilities = (w) => w.forced.map((f) => f.ability);
 
-// The game's part of the file and the module.
+// 2.0: the module as PBZModLoader loads it.
 {
-    const text = fs.readFileSync(SCRIPT, "utf8");
-    const lines = text.split("\n");
-    check("the game's part: its 13 lines, then the mod's block, then the source map line",
-        lines[12] == "exports.WeaponAdvancdNumricEntryInterface = WeaponAdvancdNumricEntryInterface;"
-        && lines[13].startsWith("// Animation Cancel: begin.") && lines[lines.length - 2] == "// Animation Cancel: end"
-        && lines[lines.length - 1] == "//# sourceMappingURL=WeaponAdvancdNumricEntry.js.map" && !text.endsWith("\n"));
     const w = boot();
-    check("the game's class is still exported with PlayNiagara",
-        typeof w.exports.WeaponAdvancdNumricEntryInterface.prototype.PlayNiagara == "function");
-    check("one 16 ms poll timer", w.interval == 16 && typeof w.timer == "function");
-    const menu = w.menu();
-    check("Mods Menu entry: the mod's own settings file, version 1.0, six settings",
-        !!menu && menu.file == "phantombladezero_animationcancel.txt" && menu.version == "1.0"
-        && menu.settings.length == 6);
+    check("no error at load; stop() exported; one 16 ms poll timer", !w.loadError && typeof w.exports.stop == "function"
+        && w.interval == 16 && typeof w.timer == "function");
+    check("one start line for loader.log, naming the settings file in the mod's folder",
+        w.logs.length == 1 && w.logs[0] == `[PBZMOD] [Animation Cancel] ${VERSION} started; settings: ${SETTINGS_PATH}`);
+    check("no Mods Menu: no page pushed anywhere", globalThis.PBZModsMenu === undefined && w.pushed.length == 0);
+    check("a missing settings file is written once with the defaults; the shipped file is exactly that text (CRLF)",
+        w.saved.length == 1 && w.saved[0][0] == SETTINGS_PATH && w.saved[0][1] == fs.readFileSync(SETTINGS, "utf8")
+        && fs.readFileSync(SETTINGS, "utf8").includes("\r\n"));
+    w.stop();
+    check("stop(): the timer cleared, a line for loader.log, no warning", w.cleared
+        && w.logs[w.logs.length - 1] == "[PBZMOD] [Animation Cancel] stopped" && w.warnings.length == 0);
+    const again = boot();
+    again.setTags(ATTACK);
+    again.press(DODGE);
+    again.polls(3);
+    check("a second start after stop() (the reload): it loads and cancels", !again.loadError
+        && abilities(again).join() == "Ability.Action.Hun.Dash");
 }
 
-// The shipped settings file holds the defaults of the script.
+// 2.0: Mods Menu, optional; the shipped settings file holds the page's defaults.
 {
+    const m = boot({ menu: true, settings: "Cancel=0\r\n" });
+    const page = m.menu();
+    check("Mods Menu running: one page with the folder name as its id, the mod's settings file, version, store "
+        + "\"saved\", six rows", m.pushed.length == 1 && page.id == "phantombladezero_animationcancel"
+        && page.file == "phantombladezero_animationcancel.txt" && page.version == VERSION && page.store == "saved"
+        && page.settings.length == 6);
+    // Mods Menu 0.9.8 hides a pushed page under one of its built-in ids unless its own loader started that mod (the
+    // game test of 2026-11-14: 2.0's page under 1.0's id PBZAnimationCancel did not show)
+    const BUILT_IN = ["PBZAccessoryBoost", "PBZAnimationCancel", "PBZBuffDuration", "PBZDropMultiplier", "PBZHardMode",
+        "PBZLootGlow", "PBZMoveSpeed", "PBZVisualTweaks", "PBZWagerTuner"];
+    check("... and none of Mods Menu's built-in ids", !BUILT_IN.includes(page.id));
     const text = fs.readFileSync(SETTINGS, "utf8");
-    const values = Object.fromEntries([...text.matchAll(/^(\w+)=(\S+)/gm)].map((m) => [m[1], Number(m[2])]));
-    const w = boot();
-    const defaults = Object.fromEntries(w.menu().settings.map((s) => [s.key, Number(s.default)]));
-    check("loose/phantombladezero_animationcancel.txt holds the six defaults (CRLF line ends)",
-        JSON.stringify(values) == JSON.stringify(defaults) && text.includes("\r\n"));
+    const values = Object.fromEntries([...text.matchAll(/^(\w+)=(\S+)/gm)].map((x) => [x[1], Number(x[2])]));
+    const defaults = Object.fromEntries(page.settings.map((s) => [s.key, Number(s.default)]));
+    check("the shipped settings file holds the page's six defaults", JSON.stringify(values) == JSON.stringify(defaults));
+    check("the mod reads the file the page saves (Cancel=0 there: the dodge is left to the game)",
+        m.logs[0].endsWith(`settings: ${MENU_PATH} (Mods Menu's page)`) && (m.setTags(ATTACK), m.press(DODGE), m.polls(3),
+            m.forced.length == 0));
+    m.release(DODGE);
+    m.files.set(MENU_PATH, "Cancel=1\r\n");
+    page.onChange();
+    m.poll();
+    m.press(DODGE);
+    m.polls(3);
+    check("... a change on the page is read at the next poll", abilities(m).join() == "Ability.Action.Hun.Dash");
+    check("the texts say what the mod does (guard cuts, dodge where the game makes it wait)",
+        /dodge works where the game makes it wait/.test(page.settings[0].help) && /dodge breaks out where the game makes it wait/.test(text));
+    const a = boot({ menu: "array" });
+    check("Mods Menu not started yet (a plain array): nothing pushed, the mod's own file", a.menuGlobal.length == 0
+        && a.logs[0].endsWith(`settings: ${SETTINGS_PATH}`));
+    const o = boot({ menu: true, menuMissing: ["store.saved"] });
+    check("an older Mods Menu without store \"saved\": no page", o.pushed.length == 0);
 }
 
 // Cancel: a dodge during an attack.
@@ -384,8 +444,15 @@ const abilities = (w) => w.forced.map((f) => f.ability);
     check("a missing input action leaves only that move to the game", abilities(w).join() == "Ability.Action.Hun.Dash");
 
     const c = boot({ missingClass: true });
-    check("a missing game class: not started, one line in the game's log, no timer",
-        c.timer === undefined && c.warnings.length == 1 && c.warnings[0].includes("not started"));
+    check("a missing game class: the load throws (PBZModLoader logs the mod as failed), one line, no timer",
+        !!c.loadError && c.timer === undefined && c.warnings.length == 1 && c.warnings[0].includes("not started"));
+    const n = boot({ noGameInstance: true });
+    check("no GameInstance: the load throws, no timer", !!n.loadError && n.timer === undefined);
+    const f = boot();
+    f.gameInstance.freed = true;
+    f.polls(25);
+    check("2.0: a freed GameInstance (the game's exit): the polls wait, no error counted, no warning",
+        !f.cleared && f.warnings.length == 0);
 
     const e = boot();
     e.throwOnPawn = true;

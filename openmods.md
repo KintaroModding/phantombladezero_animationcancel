@@ -1,6 +1,6 @@
 # Animation Cancel
 
-Guard cuts your own attacks short, dodge where the game makes it wait, and dodge or guard breaks you out of a stagger. Settings in a text file next to the mod.
+Guard cuts your own attacks short, dodge where the game makes it wait, and dodge or guard breaks you out of a stagger. A PBZModLoader mod.
 
 ## What it does
 
@@ -19,7 +19,7 @@ Your guard no longer waits for your own swing to end, and dodge or guard gets yo
 
 Dodge and guard keep their costs, cooldowns and invincibility frames: the mod starts the game's own moves. Never
 cancelled or escaped: combat arts, Sha-Chi skills, executions, perfect-dodge counters, a landed parry, a heal,
-knockdowns, launches, being executed or grabbed, death and cutscenes. Nothing is written to your save.
+knockdowns, launches, being executed or grabbed, death and cutscenes.
 
 | | Game | With the mod (default) |
 |---|---|---|
@@ -30,7 +30,8 @@ knockdowns, launches, being executed or grabbed, death and cutscenes. Nothing is
 | Dodge in a broken stance | waits | rolls out |
 | Medicine key during an attack | waits | waits (`CancelHeal=1`: drinks at once) |
 
-It is a pak mod: it replaces one small game script and needs no UE4SS.
+It is a PBZModLoader mod: a script in the game's own script engine. It replaces no game file and writes nothing into
+the save.
 
 ## Screenshots
 
@@ -38,15 +39,17 @@ It is a pak mod: it replaces one small game script and needs no UE4SS.
 
 ## How to install
 
-1. Download the zip of the latest release on GitHub (`phantombladezero_animationcancel_<version>.zip`).
-2. Open the game folder `ProjectPBZ\Content\Paks\`. If it has no folder `~mods`, create it.
-3. Unpack the four files of the zip into `ProjectPBZ\Content\Paks\~mods\`: the mod
-   (`phantombladezero_animationcancel_P.pak`, `.utoc` and `.ucas`) and its settings file
-   (`phantombladezero_animationcancel.txt`).
+1. Install [PBZModLoader](https://github.com/KintaroModding/phantombladezero_pbzmodloader) 2.1.0 or later.
+2. Download the zip of the latest release on GitHub (`phantombladezero_animationcancel_<version>.zip`).
+3. Unpack it into the game folder (the folder that holds `ProjectPBZ`). It adds the folder
+   `ProjectPBZ\PBZModLoader\mods\phantombladezero_animationcancel\` with `main.js` and the settings file.
 4. Start the game.
 
-To update the mod, replace the three mod files with the ones of the new release; keep your settings file (a setting
-that it does not have keeps its default). To remove the mod, delete the four files.
+To check that it runs: `ProjectPBZ\PBZModLoader\loader.log` has the line
+`[PBZMOD] [Animation Cancel] <version> started; settings: ...`.
+
+To update the mod, replace `main.js` with the one of the new release; keep your settings file (a setting that it does
+not have keeps its default). To remove the mod, delete the folder `ProjectPBZ\PBZModLoader\mods\phantombladezero_animationcancel\`.
 
 ## How to use
 
@@ -54,10 +57,14 @@ Nothing to do: the mod works as soon as you load a game. Play as usual and press
 
 ## Settings
 
-The settings are in `ProjectPBZ\Content\Paks\~mods\phantombladezero_animationcancel.txt`, next to the mod. Open it
-with a text editor, change a value and save: the mod reads the file every 2 seconds, so the game uses it without a
-restart. Without the file the mod uses the defaults below. `on`/`off` and `true`/`false` work too; a value it cannot
-read keeps its default.
+The settings are in `ProjectPBZ\PBZModLoader\mods\phantombladezero_animationcancel\phantombladezero_animationcancel.txt`. Open it with a text editor,
+change a value and save: the mod reads the file every 2 seconds, so the game uses it without a restart. Without the
+file the mod writes it with the defaults below. Keys are not case-sensitive; `;` starts a comment. `on`/`off` and
+`true`/`false` work too; a value it cannot read keeps its default.
+
+**With Mods Menu** (0.9.0 or later) in the game, the mod adds its page to Mods Menu's tab in the game's settings, and
+the page's settings are the ones that count: Mods Menu keeps them in its own file in the game's `Saved` folder, and
+the file in the mod's folder is not read then.
 
 | Setting | Default | What it does |
 |---|---|---|
@@ -70,31 +77,25 @@ read keeps its default.
 
 ## Compatibility
 
-- Game version: Release (Steam build 26266538) (`CL-301524_JKS-17219`).
-- The mod replaces the game script `ProjectPBZ/Content/JavaScript/UI/Widget/Foundation/WeaponAdvancdNumricEntry.js`
-  (a small HUD script for weapon stat values; its own code stays as it is). A mod that replaces the same file
-  conflicts with this one; only one of them works.
+- Game version: Steam build 26367565 (`CL-302256_JKS-17280`).
+- Needs PBZModLoader 2.1.0 or later. Mods Menu is optional.
+- Version 1.0 of this mod (the files `phantombladezero_animationcancel_P.pak`, `.utoc`, `.ucas` and
+  `phantombladezero_animationcancel.txt` in `ProjectPBZ\Content\Paks\~mods`): remove them first. 2.0 replaces no
+  game script; copy your values into the new settings file.
 - Other mods that react to your dodge or parry (for example Witch Time, Heaven or Hell, Live by the Blade) work with
   it: a cancelled attack's dodge is the game's own dodge.
-- After a game update that changes this script, the mod hides the update until a new version is out.
 
 ## Known issues
 
-None yet.
+- Not tested in game yet.
 
 ## How to build
 
-Anyone can build this mod from its source code and check that the download matches it.
-
-1. Install the tools: Windows PowerShell 5.1 (part of Windows), [repak](https://github.com/trumank/repak/releases)
-   v0.2.3 and [retoc](https://github.com/trumank/retoc/releases) v0.1.5 in a folder `_tools\repak\` and `_tools\retoc\`
-   above the repository (or set `UE5_TOOLS`); optional: [Node.js](https://nodejs.org/) for the check of JavaScript.
-   `README.md` has the details.
-2. Build it: `powershell -ExecutionPolicy Bypass -File .\build.ps1`
-3. Find the files: `dist\phantombladezero_animationcancel_P.pak`, `.utoc` and `.ucas`, and the settings file
-   `dist\phantombladezero_animationcancel.txt`.
+There is nothing to build: `src\phantombladezero_animationcancel\` is the mod folder (`main.js` and the settings file).
+`tests\test_mod.js` runs the script outside the game with Node.js and stand-ins for the game: `node tests\test_mod.js`.
+`README.md` has the details.
 
 ## Credits
 
-Made by Kintaro. MIT license: you may use, change and share this mod. Phantom Blade Zero and its files belong to
-their makers; the mod changes only what is listed above.
+Made by Kintaro. MIT license: you may use, change and share this mod. PBZModLoader is made by LKF, its fork by
+KintaroModding. Phantom Blade Zero and its files belong to their makers.
