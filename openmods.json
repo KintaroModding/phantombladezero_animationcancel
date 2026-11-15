@@ -7,5 +7,5 @@
   "tags": ["gameplay"],
   "requires": ["PBZModLoader (tested with 2.1.0)"],
   "gameVersions": ["Steam build 26367565"],
-  "cover": "docs/cover.png"
+  "cover": "docs/cover.webp"
 }

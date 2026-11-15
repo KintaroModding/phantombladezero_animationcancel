@@ -35,7 +35,7 @@ the save.
 
 ## Screenshots
 
-![Animation Cancel](docs/cover.png)
+![Animation Cancel](docs/cover.webp)
 
 ## How to install
 
